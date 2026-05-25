@@ -32,7 +32,8 @@ export const getEvent = async (id) => {
 }
 
 export const createEvent = async (data) => {
-  if (data.poster instanceof File) {
+  const hasFile = data.poster instanceof File || data.banner instanceof File
+  if (hasFile) {
     const formData = new FormData()
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined) {
@@ -50,7 +51,8 @@ export const createEvent = async (data) => {
 }
 
 export const updateEvent = async (id, data) => {
-  if (data.poster instanceof File) {
+  const hasFile = data.poster instanceof File || data.banner instanceof File
+  if (hasFile) {
     const formData = new FormData()
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined) {

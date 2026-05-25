@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getEvents, getCategories } from '../services/eventService'
+import { useCity } from '../context/CityContext'
 import { Spinner } from '../components/ui'
+import WishlistButton from '../components/WishlistButton'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const PAGE_SIZE = 12
 
 function DiscoverPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { selectedCity } = useCity()
   const [events, setEvents] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,20 +19,18 @@ function DiscoverPage() {
   const [page, setPage] = useState(1)
   const [error, setError] = useState('')
 
-  // Filters
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
+  // Filters from URL params
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [sortBy, setSortBy] = useState('title')
 
   const fetchedRef = useRef(false)
   const observerRef = useRef(null)
 
   useEffect(() => {
-    if (fetchedRef.current) return
-    fetchedRef.current = true
     fetchCategories()
     fetchEvents(1, true)
-  }, [])
+  }, [selectedCity])
 
   const fetchCategories = async () => {
     try {
@@ -49,6 +51,8 @@ function DiscoverPage() {
     try {
       const params = {}
       if (selectedCategory) params.category = selectedCategory
+      if (searchQuery) params.search = searchQuery
+      if (selectedCity) params.city = selectedCity
 
       const data = await getEvents(pageNum, PAGE_SIZE, params)
       const results = data.results || data
@@ -75,7 +79,13 @@ function DiscoverPage() {
     setPage(1)
     setHasMore(true)
     fetchEvents(1, true)
-  }, [selectedCategory])
+
+    // Update URL params
+    const params = new URLSearchParams()
+    if (selectedCategory) params.set('category', selectedCategory)
+    if (searchQuery) params.set('search', searchQuery)
+    setSearchParams(params)
+  }, [selectedCategory, searchQuery])
 
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore || loading) return
@@ -229,6 +239,11 @@ function DiscoverPage() {
                     </span>
                   </div>
                 )}
+
+                {/* Wishlist Button */}
+                <div className="absolute bottom-2 right-2 z-10">
+                  <WishlistButton eventId={event.id} size="sm" />
+                </div>
               </div>
 
               {/* Info */}

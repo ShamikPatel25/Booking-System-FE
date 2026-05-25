@@ -21,6 +21,12 @@ export const getProfile = async () => {
   return response.data
 }
 
+// Update user profile
+export const updateProfile = async (userId, profileData) => {
+  const response = await api.patch(`/users/${userId}/`, profileData)
+  return response.data
+}
+
 // Change password
 export const changePassword = async (oldPassword, newPassword) => {
   const response = await api.post('/users/change-password/', {
@@ -34,6 +40,24 @@ export const changePassword = async (oldPassword, newPassword) => {
 export const refreshToken = async (refresh) => {
   const response = await api.post('/users/auth/token/refresh/', {
     refresh
+  })
+  return response.data
+}
+
+// Request password reset email
+export const requestPasswordReset = async (email) => {
+  const response = await api.post('/users/auth/password-reset/', {
+    email
+  })
+  return response.data
+}
+
+// Confirm password reset with token
+export const confirmPasswordReset = async (token, newPassword, confirmPassword) => {
+  const response = await api.post('/users/auth/password-reset-confirm/', {
+    token,
+    new_password: newPassword,
+    confirm_password: confirmPassword
   })
   return response.data
 }

@@ -1,12 +1,20 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import CitySelector from './CitySelector'
+import LanguageSelector from '../LanguageSelector'
 
 function Navbar() {
   const { user, logout, isAuthenticated, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
 
   const handleLogout = () => {
     logout()
@@ -28,17 +36,31 @@ function Navbar() {
             </span>
           </Link>
 
+          {/* City Selector (Desktop) */}
+          <div className="hidden md:flex items-center gap-2">
+            <CitySelector />
+            <LanguageSelector />
+          </div>
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
             <Link
               to="/"
-              className="text-gray-600 hover:text-primary-500 font-medium transition-colors"
+              className={`font-medium transition-colors ${
+                isActive('/')
+                  ? 'text-primary-500'
+                  : 'text-gray-600 hover:text-primary-500'
+              }`}
             >
               Home
             </Link>
             <Link
               to="/discover"
-              className="text-gray-600 hover:text-primary-500 font-medium transition-colors"
+              className={`font-medium transition-colors ${
+                isActive('/discover')
+                  ? 'text-primary-500'
+                  : 'text-gray-600 hover:text-primary-500'
+              }`}
             >
               Discover
             </Link>
@@ -47,9 +69,28 @@ function Navbar() {
               <>
                 <Link
                   to="/my-bookings"
-                  className="text-gray-600 hover:text-primary-500 font-medium transition-colors"
+                  className={`font-medium transition-colors ${
+                    isActive('/my-bookings')
+                      ? 'text-primary-500'
+                      : 'text-gray-600 hover:text-primary-500'
+                  }`}
                 >
                   My Bookings
+                </Link>
+                <Link
+                  to="/wishlist"
+                  className={`font-medium transition-colors ${
+                    isActive('/wishlist')
+                      ? 'text-primary-500'
+                      : 'text-gray-600 hover:text-primary-500'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    Wishlist
+                  </span>
                 </Link>
 
                 {/* User Menu */}
@@ -86,11 +127,18 @@ function Navbar() {
                         </Link>
                       )}
                       <Link
-                        to="/my-bookings"
+                        to="/profile"
                         className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        My Bookings
+                        Profile
+                      </Link>
+                      <Link
+                        to="/change-password"
+                        className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Change Password
                       </Link>
                       <hr className="my-1 border-gray-100" />
                       <button
@@ -142,14 +190,22 @@ function Navbar() {
             <div className="flex flex-col gap-2">
               <Link
                 to="/"
-                className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                className={`px-4 py-2 rounded-lg ${
+                  isActive('/')
+                    ? 'bg-primary-50 text-primary-600 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 to="/discover"
-                className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                className={`px-4 py-2 rounded-lg ${
+                  isActive('/discover')
+                    ? 'bg-primary-50 text-primary-600 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Discover
@@ -168,10 +224,50 @@ function Navbar() {
                   )}
                   <Link
                     to="/my-bookings"
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                    className={`px-4 py-2 rounded-lg ${
+                      isActive('/my-bookings')
+                        ? 'bg-primary-50 text-primary-600 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My Bookings
+                  </Link>
+                  <Link
+                    to="/wishlist"
+                    className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                      isActive('/wishlist')
+                        ? 'bg-primary-50 text-primary-600 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    Wishlist
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className={`px-4 py-2 rounded-lg ${
+                      isActive('/profile')
+                        ? 'bg-primary-50 text-primary-600 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <Link
+                    to="/change-password"
+                    className={`px-4 py-2 rounded-lg ${
+                      isActive('/change-password')
+                        ? 'bg-primary-50 text-primary-600 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Change Password
                   </Link>
                   <hr className="my-2 border-gray-100" />
                   <div className="px-4 py-2 text-gray-500 text-sm">

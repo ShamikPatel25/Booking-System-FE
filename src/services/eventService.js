@@ -25,3 +25,15 @@ export const getCategories = async () => {
   const response = await api.get('/categories/')
   return response.data
 }
+
+// Get cities with active venues
+export const getCities = async () => {
+  const response = await api.get('/venues/cities/')
+  return response.data
+}
+
+// Get recommended events
+export const getRecommendedEvents = async (limit = 6) => {
+  const response = await api.get('/events/recommended/', { params: { limit } })
+  return response.data
+}

@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getEventById, getEventShows } from '../services/eventService'
+import { getEventReviews, getReviewStats, canReview } from '../services/reviewService'
+import { useAuth } from '../context/AuthContext'
 import { Spinner, Badge } from '../components/ui'
+import ShareButtons from '../components/ShareButtons'
+import WishlistButton from '../components/WishlistButton'
+import StarRating from '../components/StarRating'
+import ReviewCard from '../components/ReviewCard'
+import ReviewForm from '../components/ReviewForm'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -17,12 +24,17 @@ const categoryGradients = {
 
 function EventDetailPage() {
   const { id } = useParams()
+  const { isAuthenticated } = useAuth()
 
   const [event, setEvent] = useState(null)
   const [shows, setShows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedDate, setSelectedDate] = useState(null)
+  const [reviews, setReviews] = useState([])
+  const [reviewStats, setReviewStats] = useState(null)
+  const [canUserReview, setCanUserReview] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
   const fetchedRef = useRef(false)
   const lastIdRef = useRef(null)
 
@@ -39,17 +51,31 @@ function EventDetailPage() {
 
   const fetchEventData = async () => {
     try {
-      const [eventData, showsData] = await Promise.all([
+      const [eventData, showsData, reviewsData, statsData] = await Promise.all([
         getEventById(id),
-        getEventShows(id)
+        getEventShows(id),
+        getEventReviews(id),
+        getReviewStats(id)
       ])
       setEvent(eventData)
       const showsList = showsData.results || showsData
       setShows(showsList)
+      setReviews(reviewsData.results || reviewsData)
+      setReviewStats(statsData)
 
       // Set first date as selected
       if (showsList.length > 0) {
         setSelectedDate(showsList[0].show_date)
+      }
+
+      // Check if user can review
+      if (isAuthenticated) {
+        try {
+          const canReviewData = await canReview(id)
+          setCanUserReview(canReviewData.can_review)
+        } catch (err) {
+          console.error('Error checking review eligibility:', err)
+        }
       }
     } catch (err) {
       setError('Failed to load event details')
@@ -98,6 +124,7 @@ function EventDetailPage() {
   const categoryName = event?.category?.name || 'Event'
   const gradient = categoryGradients[categoryName] || categoryGradients.default
   const posterUrl = event?.poster ? (event.poster.startsWith('http') ? event.poster : `${API_URL}${event.poster}`) : null
+  const bannerUrl = event?.banner ? (event.banner.startsWith('http') ? event.banner : `${API_URL}${event.banner}`) : null
 
   if (loading) {
     return <Spinner.Page message="Loading event details..." />
@@ -122,8 +149,23 @@ function EventDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Banner */}
-      <section className={`relative bg-gradient-to-br ${gradient} overflow-hidden`}>
-        <div className="absolute inset-0 bg-black/20" />
+      <section className="relative overflow-hidden">
+        {/* Banner Background */}
+        {bannerUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/50" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+          </>
+        ) : (
+          <>
+            <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+            <div className="absolute inset-0 bg-black/20" />
+          </>
+        )}
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
           {/* Back Button */}
@@ -157,13 +199,30 @@ function EventDetailPage() {
 
             {/* Event Info */}
             <div className="flex-1">
-              <Badge variant="primary" className="bg-white/20 text-white mb-4">
-                {categoryName}
-              </Badge>
+              <div className="flex items-center gap-3 mb-4">
+                <Badge variant="primary" className="bg-white/20 text-white">
+                  {categoryName}
+                </Badge>
+                <WishlistButton eventId={event.id} size="md" />
+              </div>
 
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
                 {event.title}
               </h1>
+
+              {/* Genres */}
+              {event.genres && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {event.genres.split('/').map((genre, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm text-white/90 border border-white/20"
+                    >
+                      {genre.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-4 text-white/90 mb-6">
                 {event.language && (
@@ -287,6 +346,87 @@ function EventDetailPage() {
                 </div>
               )}
             </section>
+
+            {/* Reviews Section */}
+            <section className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Reviews & Ratings</h2>
+                  {reviewStats && reviewStats.total_count > 0 && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <StarRating rating={reviewStats.avg_rating} size="sm" />
+                      <span className="text-lg font-semibold text-gray-900">{reviewStats.avg_rating}</span>
+                      <span className="text-gray-500">({reviewStats.total_count} reviews)</span>
+                    </div>
+                  )}
+                </div>
+                {canUserReview && !showReviewForm && (
+                  <button
+                    onClick={() => setShowReviewForm(true)}
+                    className="px-4 py-2 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors"
+                  >
+                    Write a Review
+                  </button>
+                )}
+              </div>
+
+              {/* Review Form */}
+              {showReviewForm && (
+                <div className="mb-6">
+                  <ReviewForm
+                    eventId={id}
+                    onSuccess={() => {
+                      setShowReviewForm(false)
+                      setCanUserReview(false)
+                      fetchEventData()
+                    }}
+                    onCancel={() => setShowReviewForm(false)}
+                  />
+                </div>
+              )}
+
+              {/* Rating Distribution */}
+              {reviewStats && reviewStats.total_count > 0 && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Rating Distribution</h4>
+                  <div className="space-y-2">
+                    {[5, 4, 3, 2, 1].map(star => {
+                      const count = reviewStats.rating_distribution?.[star] || 0
+                      const percentage = reviewStats.total_count > 0 ? (count / reviewStats.total_count) * 100 : 0
+                      return (
+                        <div key={star} className="flex items-center gap-2">
+                          <span className="w-3 text-sm text-gray-600">{star}</span>
+                          <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-yellow-400 h-2 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <span className="w-8 text-xs text-gray-500 text-right">{count}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews List */}
+              {reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {reviews.map(review => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-3">📝</div>
+                  <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+                </div>
+              )}
+            </section>
           </div>
 
           {/* Sidebar */}
@@ -338,6 +478,15 @@ function EventDetailPage() {
                     Free cancellation
                   </li>
                 </ul>
+              </div>
+
+              {/* Share */}
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Share Event</h3>
+                <ShareButtons
+                  title={event.title}
+                  text={`Check out ${event.title} - Book your tickets now!`}
+                />
               </div>
             </div>
           </div>

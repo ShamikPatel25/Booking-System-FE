@@ -49,12 +49,23 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const userData = await getProfile()
+      setUser(userData)
+    } catch (error) {
+      console.error('Failed to refresh user data:', error)
+    }
+  }
+
   // Values available to all components
   const value = {
     user,
     loading,
     login,
     logout,
+    refreshUser,
     isAuthenticated: !!user,
     isAdmin: !!(user?.is_staff || user?.is_superuser)
   }

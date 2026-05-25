@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { AdminLayout } from '../../components/admin'
-import {
-  getShowPricing, getSeatStats, blockSeats, unblockSeats, getShowSeats
-} from '../../services/adminService'
-import { Spinner, ToastContainer } from '../../components/ui'
+import { getShowPricing, getSeatStats, getShowSeats } from '../../services/adminService'
+import { Spinner } from '../../components/ui'
 import api from '../../services/api'
 
 function SeatManagementPage() {
@@ -16,18 +14,6 @@ function SeatManagementPage() {
   const [seatStats, setSeatStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedSeats, setSelectedSeats] = useState([])
-  const [blocking, setBlocking] = useState(false)
-  const [toasts, setToasts] = useState([])
-
-  const addToast = (message, type = 'success') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
 
   const categoryStyles = [
     { bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700', seatBorder: 'border-blue-400' },
@@ -55,62 +41,10 @@ function SeatManagementPage() {
       setSeatStats(statsData)
       const seatsArray = seatsData.results || seatsData || []
       setSeats(seatsArray)
-      setSelectedSeats([])
     } catch (err) {
       setError('Failed to load data')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSeatClick = (seat) => {
-    if (seat.status === 'booked') return
-    setSelectedSeats(prev => {
-      const isSelected = prev.find(s => s.id === seat.id)
-      if (isSelected) return prev.filter(s => s.id !== seat.id)
-      return [...prev, seat]
-    })
-  }
-
-  const handleBlockSeats = async () => {
-    if (selectedSeats.length === 0) return
-    const toBlock = selectedSeats.filter(s => s.status !== 'blocked' && s.status !== 'booked')
-    if (toBlock.length === 0) {
-      addToast('No seats available to block', 'warning')
-      return
-    }
-
-    setBlocking(true)
-
-    try {
-      await blockSeats(showId, toBlock.map(s => s.id))
-      addToast(`${toBlock.length} seat(s) blocked`, 'success')
-      fetchData()
-    } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to block seats', 'error')
-    } finally {
-      setBlocking(false)
-    }
-  }
-
-  const handleUnblockSeats = async () => {
-    if (selectedSeats.length === 0) return
-    const toUnblock = selectedSeats.filter(s => s.status === 'blocked')
-    if (toUnblock.length === 0) {
-      addToast('No blocked seats selected', 'warning')
-      return
-    }
-
-    setBlocking(true)
-
-    try {
-      await unblockSeats(showId, toUnblock.map(s => s.id))
-      addToast(`${toUnblock.length} seat(s) unblocked`, 'success')
-      fetchData()
-    } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to unblock seats', 'error')
-    } finally {
-      setBlocking(false)
     }
   }
 
@@ -162,7 +96,6 @@ function SeatManagementPage() {
       }
     })
 
-    // Sort by first row letter (A comes first, closest to screen)
     return result.sort((a, b) => {
       const rowA = a.firstRow || 'Z'
       const rowB = b.firstRow || 'Z'
@@ -180,8 +113,6 @@ function SeatManagementPage() {
 
   const seatsGenerated = seatStats?.generated
   const seatsByCategory = getSeatsByCategory()
-  const hasBlockedSelected = selectedSeats.some(s => s.status === 'blocked')
-  const hasAvailableSelected = selectedSeats.some(s => s.status === 'available' || s.status === 'locked')
 
   return (
     <AdminLayout>
@@ -198,8 +129,6 @@ function SeatManagementPage() {
           </p>
         </div>
       </div>
-
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">{error}</div>
@@ -234,40 +163,9 @@ function SeatManagementPage() {
       {/* Seat Map */}
       {seatsGenerated && seats.length > 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Seat Map</h2>
-              <p className="text-sm text-gray-500">Click seats to select, then block/unblock. Booked seats shown in gray.</p>
-            </div>
-            {selectedSeats.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">{selectedSeats.length} seat(s) selected</span>
-                {hasAvailableSelected && (
-                  <button
-                    onClick={handleBlockSeats}
-                    disabled={blocking}
-                    className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {blocking ? 'Blocking...' : 'Block Selected'}
-                  </button>
-                )}
-                {hasBlockedSelected && (
-                  <button
-                    onClick={handleUnblockSeats}
-                    disabled={blocking}
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {blocking ? 'Unblocking...' : 'Unblock Selected'}
-                  </button>
-                )}
-                <button
-                  onClick={() => setSelectedSeats([])}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50"
-                >
-                  Clear Selection
-                </button>
-              </div>
-            )}
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Seat Map</h2>
+            <p className="text-sm text-gray-500">Visual overview of seat layout and status for this show.</p>
           </div>
 
           {/* Screen indicator */}
@@ -280,7 +178,7 @@ function SeatManagementPage() {
 
           {/* Seat Layout */}
           <div className="space-y-4">
-            {seatsByCategory.map(({ category, pricing: catPricing, rows, sortedRowLabels, style }) => (
+            {seatsByCategory.map(({ category, rows, sortedRowLabels, style }) => (
               <div key={category?.id || 'unknown'} className={`${style.bg} rounded-xl p-4 border-2 border-dashed ${style.border}`}>
                 <div className="flex items-center justify-center gap-3 mb-3">
                   <span className={`font-semibold ${style.text}`}>{category?.name || 'Unknown'}</span>
@@ -295,33 +193,28 @@ function SeatManagementPage() {
                       <span className="w-6 text-center text-xs font-medium text-gray-500">{rowLabel}</span>
                       <div className="flex gap-1 flex-wrap justify-center">
                         {rows[rowLabel].map(seat => {
-                          const isSelected = selectedSeats.find(s => s.id === seat.id)
                           const isBooked = seat.status === 'booked'
                           const isBlocked = seat.status === 'blocked'
                           const isLocked = seat.status === 'locked'
 
                           return (
-                            <button
+                            <div
                               key={seat.id}
-                              onClick={() => handleSeatClick(seat)}
-                              disabled={isBooked}
                               title={`${rowLabel}${seat.seat_number} - ${seat.status}`}
                               className={`
-                                w-7 h-7 rounded-t-lg text-xs font-medium flex items-center justify-center transition-all
-                                ${isSelected
-                                  ? 'bg-primary-500 text-white ring-2 ring-primary-300'
-                                  : isBooked
-                                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                                w-7 h-7 rounded-t-lg text-xs font-medium flex items-center justify-center
+                                ${isBooked
+                                  ? 'bg-gray-400 text-white'
                                   : isBlocked
                                   ? 'bg-red-500 text-white'
                                   : isLocked
                                   ? 'bg-amber-300 text-amber-800'
-                                  : `border-2 ${style.seatBorder} bg-white hover:bg-gray-100 cursor-pointer`
+                                  : `border-2 ${style.seatBorder} bg-white`
                                 }
                               `}
                             >
                               {seat.seat_number}
-                            </button>
+                            </div>
                           )
                         })}
                       </div>
@@ -338,10 +231,6 @@ function SeatManagementPage() {
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-t-lg border-2 border-gray-400 bg-white" />
               <span className="text-sm text-gray-600">Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-t-lg bg-primary-500" />
-              <span className="text-sm text-gray-600">Selected</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-t-lg bg-red-500" />

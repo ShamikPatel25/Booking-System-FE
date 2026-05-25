@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Badge from './ui/Badge'
+import WishlistButton from './WishlistButton'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -81,6 +82,11 @@ function EventCard({ event, featured = false }) {
             </div>
           </div>
         )}
+
+        {/* Wishlist Button - Always visible */}
+        <div className="absolute bottom-3 right-3 z-10">
+          <WishlistButton eventId={event.id} size="sm" />
+        </div>
 
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

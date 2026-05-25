@@ -13,17 +13,17 @@ function SeatSelectionPage() {
   const [seats, setSeats] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedSeats, setSelectedSeats] = useState([])
-  const [originallyLockedSeats, setOriginallyLockedSeats] = useState([]) // Track seats that were locked when page loaded
+  const [originallyLockedSeats, setOriginallyLockedSeats] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [locking, setLocking] = useState(false)
+  const [zoom, setZoom] = useState(1)
 
-  // Category colors with Tailwind classes
   const categoryStyles = [
-    { bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-700', activeBg: 'bg-amber-400' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-400', text: 'text-emerald-700', activeBg: 'bg-emerald-400' },
-    { bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700', activeBg: 'bg-blue-400' },
-    { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-700', activeBg: 'bg-purple-400' },
+    { bg: 'bg-gradient-to-br from-amber-50 to-amber-100', border: 'border-amber-400', text: 'text-amber-700', activeBg: 'bg-gradient-to-r from-amber-400 to-amber-500', hoverBg: 'hover:bg-amber-100', seatBorder: 'border-amber-300' },
+    { bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100', border: 'border-emerald-400', text: 'text-emerald-700', activeBg: 'bg-gradient-to-r from-emerald-400 to-emerald-500', hoverBg: 'hover:bg-emerald-100', seatBorder: 'border-emerald-300' },
+    { bg: 'bg-gradient-to-br from-blue-50 to-blue-100', border: 'border-blue-400', text: 'text-blue-700', activeBg: 'bg-gradient-to-r from-blue-400 to-blue-500', hoverBg: 'hover:bg-blue-100', seatBorder: 'border-blue-300' },
+    { bg: 'bg-gradient-to-br from-purple-50 to-purple-100', border: 'border-purple-400', text: 'text-purple-700', activeBg: 'bg-gradient-to-r from-purple-400 to-purple-500', hoverBg: 'hover:bg-purple-100', seatBorder: 'border-purple-300' },
   ]
 
   useEffect(() => {
@@ -221,16 +221,78 @@ function SeatSelectionPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Screen */}
-        <div className="mb-8">
-          <div className="relative max-w-3xl mx-auto">
-            <div className="h-2 bg-gradient-to-r from-gray-200 via-gray-400 to-gray-200 rounded-full mb-2" />
-            <div className="text-center text-sm text-gray-500 font-medium">SCREEN THIS WAY</div>
+        {/* Zoom Controls */}
+        <div className="flex justify-end mb-4 gap-2">
+          <button
+            onClick={() => setZoom(z => Math.max(0.5, z - 0.1))}
+            className="p-2 bg-white rounded-lg shadow hover:bg-gray-50 transition-colors"
+            title="Zoom Out"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+            </svg>
+          </button>
+          <span className="px-3 py-2 bg-white rounded-lg shadow text-sm font-medium text-gray-600">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}
+            className="p-2 bg-white rounded-lg shadow hover:bg-gray-50 transition-colors"
+            title="Zoom In"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            className="p-2 bg-white rounded-lg shadow hover:bg-gray-50 transition-colors"
+            title="Reset Zoom"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Curved Screen */}
+        <div className="mb-10">
+          <div className="relative max-w-4xl mx-auto">
+            <svg viewBox="0 0 400 60" className="w-full h-auto">
+              <defs>
+                <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#d1d5db" />
+                  <stop offset="50%" stopColor="#9ca3af" />
+                  <stop offset="100%" stopColor="#d1d5db" />
+                </linearGradient>
+                <filter id="screenGlow">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <path
+                d="M 20 50 Q 200 10 380 50"
+                fill="none"
+                stroke="url(#screenGradient)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                filter="url(#screenGlow)"
+              />
+              <text x="200" y="55" textAnchor="middle" fill="#6b7280" fontSize="12" fontWeight="500">
+                SCREEN
+              </text>
+            </svg>
           </div>
         </div>
 
-        {/* Seat Map */}
-        <div className="space-y-8 mb-32">
+        {/* Seat Map with Zoom */}
+        <div
+          className="space-y-8 mb-32 transition-transform origin-top"
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+        >
           {categories.map((category, catIndex) => {
             const catData = seatsByCategory[category.id]
             if (!catData || catData.sortedRowLabels.length === 0) return null
@@ -268,18 +330,18 @@ function SeatSelectionPage() {
                               disabled={!canClick}
                               title={`${rowLabel}${seat.seat_number} - ₹${parseFloat(category.price).toFixed(0)}`}
                               className={`
-                                w-8 h-8 rounded-t-lg text-xs font-bold transition-all
+                                w-9 h-9 rounded-t-xl text-xs font-bold transition-all duration-200 transform
                                 ${isSelected
-                                  ? 'bg-primary-500 text-white shadow-lg scale-110'
+                                  ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg scale-110 ring-2 ring-primary-300 ring-offset-1'
                                   : isBooked
-                                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
                                   : isBlocked
-                                  ? 'bg-red-400 text-white cursor-not-allowed'
+                                  ? 'bg-gradient-to-br from-red-400 to-red-500 text-white cursor-not-allowed'
                                   : isLocked && !isMyLocked
-                                  ? 'bg-amber-200 text-amber-800 cursor-not-allowed'
+                                  ? 'bg-amber-200 text-amber-800 cursor-not-allowed animate-pulse'
                                   : isMyLocked
-                                  ? 'bg-amber-400 text-amber-900 cursor-pointer'
-                                  : `border-2 ${styles.border} bg-white text-gray-700 hover:bg-gray-100 cursor-pointer`
+                                  ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white cursor-pointer ring-2 ring-amber-300'
+                                  : `border-2 ${styles.seatBorder} bg-white text-gray-700 ${styles.hoverBg} hover:scale-105 hover:shadow-md cursor-pointer active:scale-95`
                                 }
                               `}
                             >
@@ -298,23 +360,48 @@ function SeatSelectionPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex justify-center gap-6 mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-t-lg border-2 border-gray-400 bg-white" />
-            <span className="text-sm text-gray-600">Available</span>
+        <div className="bg-white rounded-xl p-4 shadow-sm mb-8">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Seat Legend</h3>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-t-lg border-2 border-gray-300 bg-white shadow-sm" />
+              <span className="text-sm text-gray-600">Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-t-lg bg-gradient-to-br from-primary-500 to-primary-600 shadow-md" />
+              <span className="text-sm text-gray-600">Selected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-t-lg bg-gradient-to-br from-amber-400 to-amber-500" />
+              <span className="text-sm text-gray-600">My Reserved</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-t-lg bg-gray-300 opacity-60" />
+              <span className="text-sm text-gray-600">Booked</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-t-lg bg-gradient-to-br from-red-400 to-red-500" />
+              <span className="text-sm text-gray-600">Unavailable</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-t-lg bg-primary-500" />
-            <span className="text-sm text-gray-600">Selected</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-t-lg bg-red-400" />
-            <span className="text-sm text-gray-600">Unavailable</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-t-lg bg-gray-300" />
-            <span className="text-sm text-gray-600">Booked</span>
-          </div>
+
+          {/* Category Colors */}
+          {categories.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <h4 className="text-xs font-medium text-gray-500 mb-2 text-center">PRICE CATEGORIES</h4>
+              <div className="flex flex-wrap justify-center gap-3">
+                {categories.map((cat, idx) => {
+                  const styles = categoryStyles[idx] || categoryStyles[0]
+                  return (
+                    <div key={cat.id} className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded ${styles.activeBg}`} />
+                      <span className="text-sm text-gray-600">{cat.name} - ₹{parseFloat(cat.price).toFixed(0)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 import { createBooking } from '../services/bookingService'
-import { processPayment } from '../services/paymentService'
+import { processSimulatedPayment, createPaymentIntent, confirmPayment, getStripeConfig } from '../services/paymentService'
 import { unlockSeats } from '../services/seatService'
 import { useAuth } from '../context/AuthContext'
+import PaymentForm from '../components/PaymentForm'
+
+let stripePromise = null
 
 function BookingPage() {
   const location = useLocation()
@@ -12,12 +17,15 @@ function BookingPage() {
 
   const { showId, seats, totalPrice } = location.state || {}
 
-  const [timeLeft, setTimeLeft] = useState(10 * 60) // 10 minutes (backend has 11 min for 1 min buffer)
+  const [timeLeft, setTimeLeft] = useState(10 * 60)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [step, setStep] = useState('review')
+  const [booking, setBooking] = useState(null)
+  const [clientSecret, setClientSecret] = useState(null)
+  const [useStripe, setUseStripe] = useState(false)
+  const [stripeReady, setStripeReady] = useState(false)
 
-  // Ref to prevent double-click (immediate blocking before state updates)
   const isProcessingRef = useRef(false)
 
   useEffect(() => {
@@ -27,6 +35,26 @@ function BookingPage() {
   useEffect(() => {
     if (!isAuthenticated) navigate('/login')
   }, [isAuthenticated, navigate])
+
+  useEffect(() => {
+    checkStripeConfig()
+  }, [])
+
+  const checkStripeConfig = async () => {
+    try {
+      const config = await getStripeConfig()
+      if (config.publishable_key) {
+        stripePromise = loadStripe(config.publishable_key)
+        setUseStripe(true)
+      } else {
+        setUseStripe(false)
+      }
+    } catch (err) {
+      setUseStripe(false)
+    } finally {
+      setStripeReady(true)
+    }
+  }
 
   useEffect(() => {
     if (timeLeft <= 0 || step !== 'review') return
@@ -74,26 +102,38 @@ function BookingPage() {
   }
 
   const handleConfirmBooking = async () => {
-    // Immediate block using ref (prevents fast double-clicks before state updates)
     if (isProcessingRef.current) return
     isProcessingRef.current = true
 
     setLoading(true)
     setError('')
-    setStep('processing')
+
     try {
       const seatIds = seats.map(s => s.id)
-      const booking = await createBooking(showId, seatIds)
-      const payment = await processPayment(booking.id)
-      if (payment.status === 'success') {
-        setStep('success')
-        setTimeout(() => {
-          navigate('/booking-success', { state: { booking, payment, seats } })
-        }, 1500)
-      } else {
-        setStep('failed')
-        setError('Payment failed. Please try again.')
+      const newBooking = await createBooking(showId, seatIds)
+      setBooking(newBooking)
+
+      if (useStripe) {
+        const { client_secret } = await createPaymentIntent(newBooking.id)
+        setClientSecret(client_secret)
+        setStep('payment')
+        setLoading(false)
         isProcessingRef.current = false
+      } else {
+        setStep('processing')
+        const payment = await processSimulatedPayment(newBooking.id)
+        if (payment.status === 'success') {
+          setStep('success')
+          const confirmedBooking = { ...newBooking, status: 'confirmed' }
+          setTimeout(() => {
+            navigate('/booking-success', { state: { booking: confirmedBooking, payment, seats } })
+          }, 1500)
+        } else {
+          setStep('failed')
+          setError('Payment failed. Please try again.')
+          isProcessingRef.current = false
+        }
+        setLoading(false)
       }
     } catch (err) {
       console.error('Booking error:', err)
@@ -105,9 +145,31 @@ function BookingPage() {
         || 'Booking failed. Please try again.'
       setError(errorMsg)
       isProcessingRef.current = false
-    } finally {
       setLoading(false)
     }
+  }
+
+  const handleStripeSuccess = async (paymentIntent) => {
+    setStep('processing')
+    try {
+      const result = await confirmPayment(paymentIntent.id)
+      if (result.status === 'success') {
+        setStep('success')
+        setTimeout(() => {
+          navigate('/booking-success', { state: { booking, payment: { status: 'success' }, seats } })
+        }, 1500)
+      } else {
+        setStep('failed')
+        setError('Payment confirmation failed. Please contact support.')
+      }
+    } catch (err) {
+      setStep('failed')
+      setError('Payment confirmation failed. Please contact support.')
+    }
+  }
+
+  const handleStripeError = (error) => {
+    setError(error.message)
   }
 
   const getSeatCategory = (seat) => {
@@ -233,10 +295,10 @@ function BookingPage() {
 
                   <button
                     onClick={handleConfirmBooking}
-                    disabled={loading || isProcessingRef.current}
+                    disabled={loading || isProcessingRef.current || !stripeReady}
                     className="w-full py-3 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-3"
                   >
-                    {loading ? 'Processing...' : `Pay ₹${totalPrice?.toFixed(0)}`}
+                    {loading ? 'Processing...' : `Proceed to Pay ₹${totalPrice?.toFixed(0)}`}
                   </button>
                   <button
                     onClick={handleCancel}
@@ -245,6 +307,17 @@ function BookingPage() {
                     Cancel
                   </button>
                 </>
+              )}
+
+              {step === 'payment' && clientSecret && stripePromise && (
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <PaymentForm
+                    clientSecret={clientSecret}
+                    onSuccess={handleStripeSuccess}
+                    onError={handleStripeError}
+                    amount={totalPrice}
+                  />
+                </Elements>
               )}
 
               {step === 'processing' && (

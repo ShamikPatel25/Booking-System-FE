@@ -36,3 +36,9 @@ export const cancelSeats = async (bookingId, seatIds) => {
   })
   return response.data
 }
+
+// Get QR code for booking
+export const getBookingQRCode = async (bookingId) => {
+  const response = await api.get(`/bookings/${bookingId}/qr_code/`)
+  return response.data
+}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getMyBookings, cancelBooking, cancelSeats } from '../services/bookingService'
 import { useAuth } from '../context/AuthContext'
 import { Spinner, Badge, ToastContainer } from '../components/ui'
+import TicketModal from '../components/TicketModal'
 
 const PAGE_SIZE = 10
 
@@ -23,6 +24,7 @@ function MyBookingsPage() {
   const [expandedBooking, setExpandedBooking] = useState(null)
   const [selectedSeats, setSelectedSeats] = useState({})
   const [toasts, setToasts] = useState([])
+  const [ticketModalBooking, setTicketModalBooking] = useState(null)
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -214,9 +216,23 @@ function MyBookingsPage() {
       confirmed: 'success',
       pending: 'warning',
       cancelled: 'danger',
-      failed: 'danger'
+      failed: 'danger',
+      expired: 'secondary'
     }
     return <Badge variant={variants[status] || 'secondary'}>{status?.toUpperCase()}</Badge>
+  }
+
+  const isShowExpired = (booking) => {
+    if (!booking?.show?.show_date || !booking?.show?.start_time) return false
+    const showDateTime = new Date(`${booking.show.show_date}T${booking.show.start_time}`)
+    return showDateTime < new Date()
+  }
+
+  const getBookingStatus = (booking) => {
+    if (booking.status === 'confirmed' && isShowExpired(booking)) {
+      return 'expired'
+    }
+    return booking.status
   }
 
   const filteredBookings = bookings.filter(b => {
@@ -231,6 +247,14 @@ function MyBookingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+      {/* Ticket Modal */}
+      {ticketModalBooking && (
+        <TicketModal
+          booking={ticketModalBooking}
+          onClose={() => setTicketModalBooking(null)}
+        />
+      )}
 
       {/* Confirmation Modal */}
       {confirmModal.show && (
@@ -321,7 +345,7 @@ function MyBookingsPage() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Bookings</h1>
           <Link to="/" className="px-4 py-2 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors">
@@ -377,7 +401,7 @@ function MyBookingsPage() {
                           <h3 className="font-bold text-gray-900">
                             {booking.show?.event?.title || 'Event'}
                           </h3>
-                          {getStatusBadge(booking.status)}
+                          {getStatusBadge(getBookingStatus(booking))}
                         </div>
                         <p className="text-sm text-gray-500 mb-2">
                           {formatDate(booking.show?.show_date)} at {formatTime(booking.show?.start_time)}
@@ -409,20 +433,38 @@ function MyBookingsPage() {
 
                     {(booking.status === 'confirmed' || booking.status === 'pending') && booking.seats?.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setExpandedBooking(expandedBooking === booking.id ? null : booking.id)}
-                          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                        >
-                          {expandedBooking === booking.id ? 'Hide Seats' : 'Manage Seats'}
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          onClick={() => handleCancel(booking.id)}
-                          disabled={cancellingId === booking.id}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-                        >
-                          {cancellingId === booking.id ? 'Cancelling...' : 'Cancel All'}
-                        </button>
+                        {booking.status === 'confirmed' && (
+                          <>
+                            <button
+                              onClick={() => setTicketModalBooking(booking)}
+                              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                              </svg>
+                              View Ticket
+                            </button>
+                            <span className="text-gray-300">|</span>
+                          </>
+                        )}
+                        {!isShowExpired(booking) && (
+                          <>
+                            <button
+                              onClick={() => setExpandedBooking(expandedBooking === booking.id ? null : booking.id)}
+                              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                            >
+                              {expandedBooking === booking.id ? 'Hide Seats' : 'Manage Seats'}
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                              onClick={() => handleCancel(booking.id)}
+                              disabled={cancellingId === booking.id}
+                              className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                            >
+                              {cancellingId === booking.id ? 'Cancelling...' : 'Cancel All'}
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

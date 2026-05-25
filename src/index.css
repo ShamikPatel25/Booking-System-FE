@@ -19,6 +19,8 @@
 
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-slow-zoom: slowZoom 20s ease-in-out infinite;
+  --animate-gradient: gradientShift 3s ease infinite;
 
   @keyframes fadeIn {
     0% { opacity: 0; }
@@ -28,6 +30,16 @@
   @keyframes slideUp {
     0% { opacity: 0; transform: translateY(10px); }
     100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slowZoom {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 }
 
