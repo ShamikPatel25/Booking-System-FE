@@ -41,7 +41,7 @@ function BookingSuccessPage() {
       hour12: true
     })
   }
-
+ 
   const seatLabels = seats?.map(s => `${s.row_label}${s.seat_number}`).join(', ') ||
     booking.seats?.map(s => `${s.row_label}${s.seat_number}`).join(', ') || 'N/A'
 
