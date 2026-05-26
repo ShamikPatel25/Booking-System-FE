@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
+import { parseApiError } from '../utils/apiUtils'
 
 function RegisterPage() {
   const navigate = useNavigate()
@@ -80,13 +81,7 @@ function RegisterPage() {
       alert('Registration successful! Please login.')
       navigate('/login')
     } catch (err) {
-      if (err.response?.data) {
-        const errors = err.response.data
-        const firstError = Object.values(errors)[0]
-        setError(Array.isArray(firstError) ? firstError[0] : firstError)
-      } else {
-        setError('Registration failed. Please try again.')
-      }
+      setError(parseApiError(err, 'Registration failed. Please try again.'))
     } finally {
       setLoading(false)
     }

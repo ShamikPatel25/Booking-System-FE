@@ -4,6 +4,8 @@ import { getMyBookings, cancelBooking, cancelSeats } from '../services/bookingSe
 import { useAuth } from '../context/AuthContext'
 import { Spinner, Badge, ToastContainer } from '../components/ui'
 import TicketModal from '../components/TicketModal'
+import { useToast } from '../hooks/useToast'
+import { formatDateLong, formatTime, isShowExpired } from '../utils/dateUtils'
 
 const PAGE_SIZE = 10
 
@@ -23,7 +25,7 @@ function MyBookingsPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [expandedBooking, setExpandedBooking] = useState(null)
   const [selectedSeats, setSelectedSeats] = useState({})
-  const [toasts, setToasts] = useState([])
+  const { toasts, addToast, removeToast } = useToast()
   const [ticketModalBooking, setTicketModalBooking] = useState(null)
 
   // Confirmation modal state
@@ -34,15 +36,6 @@ function MyBookingsPage() {
     seats: [],
     onConfirm: null
   })
-
-  const addToast = (message, type = 'success') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
 
   const showConfirm = (title, booking, seats, onConfirm) => {
     setConfirmModal({ show: true, title, booking, seats, onConfirm })
@@ -197,20 +190,6 @@ function MyBookingsPage() {
     }
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-  }
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return ''
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(hours, minutes)
-    return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-  }
-
   const getStatusBadge = (status) => {
     const variants = {
       confirmed: 'success',
@@ -222,14 +201,8 @@ function MyBookingsPage() {
     return <Badge variant={variants[status] || 'secondary'}>{status?.toUpperCase()}</Badge>
   }
 
-  const isShowExpired = (booking) => {
-    if (!booking?.show?.show_date || !booking?.show?.start_time) return false
-    const showDateTime = new Date(`${booking.show.show_date}T${booking.show.start_time}`)
-    return showDateTime < new Date()
-  }
-
   const getBookingStatus = (booking) => {
-    if (booking.status === 'confirmed' && isShowExpired(booking)) {
+    if (booking.status === 'confirmed' && isShowExpired(booking?.show?.show_date, booking?.show?.start_time)) {
       return 'expired'
     }
     return booking.status
@@ -282,7 +255,7 @@ function MyBookingsPage() {
                 <div className="mb-4 pb-4 border-b border-gray-100">
                   <p className="font-medium text-gray-900">{confirmModal.booking.show?.event?.title || 'Event'}</p>
                   <p className="text-sm text-gray-500">
-                    {formatDate(confirmModal.booking.show?.show_date)} • {formatTime(confirmModal.booking.show?.start_time)}
+                    {formatDateLong(confirmModal.booking.show?.show_date)} • {formatTime(confirmModal.booking.show?.start_time)}
                   </p>
                   <p className="text-sm text-gray-500">{confirmModal.booking.show?.screen?.venue?.name}</p>
                 </div>
@@ -404,7 +377,7 @@ function MyBookingsPage() {
                           {getStatusBadge(getBookingStatus(booking))}
                         </div>
                         <p className="text-sm text-gray-500 mb-2">
-                          {formatDate(booking.show?.show_date)} at {formatTime(booking.show?.start_time)}
+                          {formatDateLong(booking.show?.show_date)} at {formatTime(booking.show?.start_time)}
                         </p>
                         <p className="text-sm text-gray-500">
                           {booking.show?.screen?.venue?.name} • {booking.show?.screen?.name}

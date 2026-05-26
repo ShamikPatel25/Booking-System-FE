@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { confirmPasswordReset } from '../services/authService'
+import { parseApiError } from '../utils/apiUtils'
 
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
@@ -55,13 +56,7 @@ function ResetPasswordPage() {
         navigate('/login')
       }, 2000)
     } catch (err) {
-      if (err.response?.data) {
-        const errors = err.response.data
-        const firstError = Object.values(errors)[0]
-        setError(Array.isArray(firstError) ? firstError[0] : firstError)
-      } else {
-        setError('Failed to reset password. Please try again.')
-      }
+      setError(parseApiError(err, 'Failed to reset password. Please try again.'))
     } finally {
       setLoading(false)
     }

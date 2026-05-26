@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getProfile, updateProfile } from '../services/authService'
+import { parseApiError } from '../utils/apiUtils'
 
 function ProfilePage() {
   const { user, refreshUser } = useAuth()
@@ -70,13 +71,7 @@ function ProfilePage() {
         await refreshUser()
       }
     } catch (err) {
-      if (err.response?.data) {
-        const errors = err.response.data
-        const firstError = Object.values(errors)[0]
-        setError(Array.isArray(firstError) ? firstError[0] : firstError)
-      } else {
-        setError('Failed to update profile')
-      }
+      setError(parseApiError(err, 'Failed to update profile'))
     } finally {
       setSaving(false)
     }

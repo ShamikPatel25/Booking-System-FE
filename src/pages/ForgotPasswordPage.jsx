@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { requestPasswordReset } from '../services/authService'
+import { parseApiError } from '../utils/apiUtils'
 
 function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -30,13 +31,7 @@ function ForgotPasswordPage() {
         setMessage(response.detail)
       }
     } catch (err) {
-      if (err.response?.data) {
-        const errors = err.response.data
-        const firstError = Object.values(errors)[0]
-        setError(Array.isArray(firstError) ? firstError[0] : firstError)
-      } else {
-        setError('Failed to verify email. Please try again.')
-      }
+      setError(parseApiError(err, 'Failed to verify email. Please try again.'))
     } finally {
       setLoading(false)
     }

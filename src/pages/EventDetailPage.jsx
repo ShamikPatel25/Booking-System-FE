@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { getEventById, getEventShows } from '../services/eventService'
 import { getEventReviews, getReviewStats, canReview } from '../services/reviewService'
 import { useAuth } from '../context/AuthContext'
+import { useCity } from '../context/CityContext'
 import { Spinner, Badge } from '../components/ui'
 import ShareButtons from '../components/ShareButtons'
 import WishlistButton from '../components/WishlistButton'
 import StarRating from '../components/StarRating'
 import ReviewCard from '../components/ReviewCard'
 import ReviewForm from '../components/ReviewForm'
+import { formatDate, formatDateShort, formatTime } from '../utils/dateUtils'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -25,6 +27,7 @@ const categoryGradients = {
 function EventDetailPage() {
   const { id } = useParams()
   const { isAuthenticated } = useAuth()
+  const { selectedCity } = useCity()
 
   const [event, setEvent] = useState(null)
   const [shows, setShows] = useState([])
@@ -84,42 +87,30 @@ function EventDetailPage() {
     }
   }
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    })
-  }
+  // Filter shows by selected city first
+  const cityFilteredShows = selectedCity
+    ? shows.filter(s => s.screen?.venue?.city === selectedCity)
+    : shows
 
-  const formatDateShort = (dateStr) => {
-    const date = new Date(dateStr)
-    return {
-      day: date.toLocaleDateString('en-IN', { day: 'numeric' }),
-      month: date.toLocaleDateString('en-IN', { month: 'short' }),
-      weekday: date.toLocaleDateString('en-IN', { weekday: 'short' })
+  // Get unique dates from city-filtered shows
+  const uniqueDates = [...new Set(cityFilteredShows.map(s => s.show_date))].sort()
+
+  // Reset selected date if it's not available in filtered shows
+  useEffect(() => {
+    if (cityFilteredShows.length > 0 && !uniqueDates.includes(selectedDate)) {
+      setSelectedDate(uniqueDates[0])
     }
-  }
-
-  const formatTime = (timeStr) => {
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(hours, minutes)
-    return date.toLocaleTimeString('en-IN', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
-  // Get unique dates
-  const uniqueDates = [...new Set(shows.map(s => s.show_date))].sort()
+  }, [selectedCity, cityFilteredShows.length])
 
   // Filter shows by selected date
   const filteredShows = selectedDate
-    ? shows.filter(s => s.show_date === selectedDate)
-    : shows
+    ? cityFilteredShows.filter(s => s.show_date === selectedDate)
+    : cityFilteredShows
+
+  // Get unique venues from filtered shows
+  const uniqueVenues = [...new Map(
+    filteredShows.map(s => [s.screen?.venue?.id, s.screen?.venue])
+  ).values()].filter(Boolean)
 
   const categoryName = event?.category?.name || 'Event'
   const gradient = categoryGradients[categoryName] || categoryGradients.default
@@ -325,7 +316,7 @@ function EventDetailPage() {
                             {show.screen?.venue?.name || 'Venue'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {show.screen?.name || 'Screen'}
+                            {show.screen?.name || 'Screen'} • {show.screen?.venue?.city}
                           </div>
                         </div>
                       </div>
@@ -342,7 +333,16 @@ function EventDetailPage() {
               ) : (
                 <div className="text-center py-12">
                   <div className="text-4xl mb-3">🎭</div>
-                  <p className="text-gray-500">No shows available for this date</p>
+                  <p className="text-gray-500 mb-2">
+                    {selectedCity
+                      ? `No shows available in ${selectedCity}`
+                      : 'No shows available for this date'}
+                  </p>
+                  {selectedCity && shows.length > 0 && (
+                    <p className="text-sm text-gray-400">
+                      This event is available in other cities
+                    </p>
+                  )}
                 </div>
               )}
             </section>
@@ -432,25 +432,28 @@ function EventDetailPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              {/* Venue Info */}
-              {shows[0]?.screen?.venue && (
+              {/* Venues Info */}
+              {uniqueVenues.length > 0 && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Venue</h3>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {shows[0].screen.venue.name}
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    {uniqueVenues.length === 1 ? 'Venue' : 'Venues'}
+                    {selectedCity && <span className="text-sm font-normal text-gray-500 ml-2">in {selectedCity}</span>}
+                  </h3>
+                  <div className="space-y-4">
+                    {uniqueVenues.map(venue => (
+                      <div key={venue.id} className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{venue.name}</div>
+                          <div className="text-sm text-gray-500">{venue.city}</div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {shows[0].screen.venue.city}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}

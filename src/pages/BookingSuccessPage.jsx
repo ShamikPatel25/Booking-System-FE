@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { getBookingQRCode } from '../services/bookingService'
+import { formatDateLong, formatTime } from '../utils/dateUtils'
+import { generateTicketPdf } from '../utils/ticketPdf'
 
 function BookingSuccessPage() {
   const location = useLocation()
@@ -29,29 +31,6 @@ function BookingSuccessPage() {
     )
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return ''
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(hours, minutes)
-    return date.toLocaleTimeString('en-IN', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
   const seatLabels = seats?.map(s => `${s.row_label}${s.seat_number}`).join(', ') ||
     booking.seats?.map(s => `${s.row_label}${s.seat_number}`).join(', ') || 'N/A'
 
@@ -60,105 +39,7 @@ function BookingSuccessPage() {
     setDownloading(true)
 
     try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: [100, 150]
-      })
-
-      const width = 100
-      const primaryColor = [99, 102, 241]
-
-      // Header
-      doc.setFillColor(...primaryColor)
-      doc.rect(0, 0, width, 18, 'F')
-
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'bold')
-      doc.text('E-TICKET', 5, 6)
-
-      doc.setFontSize(10)
-      doc.text(booking?.booking_reference || '', 5, 13)
-
-      // Event title
-      doc.setTextColor(17, 24, 39)
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text(booking?.show?.event?.title || 'Event', width / 2, 28, { align: 'center' })
-
-      // Language
-      doc.setTextColor(107, 114, 128)
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'normal')
-      doc.text(booking?.show?.event?.language || '', width / 2, 34, { align: 'center' })
-
-      // Details
-      doc.setFontSize(6)
-      doc.setTextColor(156, 163, 175)
-      doc.text('DATE', 5, 42)
-      doc.text('TIME', 52, 42)
-
-      doc.setFontSize(8)
-      doc.setTextColor(17, 24, 39)
-      doc.text(formatDate(booking?.show?.show_date), 5, 47)
-      doc.text(formatTime(booking?.show?.start_time), 52, 47)
-
-      doc.setFontSize(6)
-      doc.setTextColor(156, 163, 175)
-      doc.text('VENUE', 5, 54)
-      doc.text('SCREEN', 52, 54)
-
-      doc.setFontSize(8)
-      doc.setTextColor(17, 24, 39)
-      doc.text(booking?.show?.screen?.venue?.name || 'N/A', 5, 59)
-      doc.text(booking?.show?.screen?.name || 'N/A', 52, 59)
-
-      // Seats box
-      doc.setFillColor(243, 244, 246)
-      doc.rect(5, 64, width - 10, 14, 'F')
-      doc.setFontSize(6)
-      doc.setTextColor(156, 163, 175)
-      doc.text('SEATS', 8, 69)
-      doc.setFontSize(10)
-      doc.setTextColor(17, 24, 39)
-      doc.setFont('helvetica', 'bold')
-      doc.text(seatLabels, 8, 75)
-
-      // Dashed line
-      doc.setDrawColor(229, 231, 235)
-      doc.setLineDashPattern([1, 1], 0)
-      doc.line(5, 82, width - 5, 82)
-      doc.setLineDashPattern([], 0)
-
-      // Total
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(107, 114, 128)
-      doc.text('Total Paid', 5, 89)
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.setTextColor(...primaryColor)
-      doc.text(`Rs. ${parseFloat(booking?.total_amount || 0).toFixed(0)}`, width - 5, 89, { align: 'right' })
-
-      // QR Code
-      if (qrCode) {
-        doc.setFillColor(249, 250, 251)
-        doc.rect(0, 95, width, 55, 'F')
-
-        const qrSize = 30
-        const qrX = (width - qrSize) / 2
-        doc.addImage(qrCode, 'PNG', qrX, 100, qrSize, qrSize)
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7)
-        doc.setTextColor(156, 163, 175)
-        doc.text('Scan at venue for entry', width / 2, 138, { align: 'center' })
-      }
-
-      doc.save(`ticket-${booking.booking_reference}.pdf`)
+      await generateTicketPdf(booking, qrCode, seatLabels)
     } catch (err) {
       console.error('Download failed:', err)
       alert('Download failed. Please try again.')
@@ -205,7 +86,7 @@ function BookingSuccessPage() {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <span className="text-xs text-gray-400 uppercase tracking-wide">Date</span>
-                <p className="font-medium text-gray-900">{formatDate(booking.show?.show_date)}</p>
+                <p className="font-medium text-gray-900">{formatDateLong(booking.show?.show_date)}</p>
               </div>
               <div>
                 <span className="text-xs text-gray-400 uppercase tracking-wide">Time</span>

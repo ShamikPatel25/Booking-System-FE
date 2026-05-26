@@ -1,14 +1,7 @@
 import StarRating from './StarRating'
+import { formatDateLong } from '../utils/dateUtils'
 
 function ReviewCard({ review }) {
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-100">
       <div className="flex items-start justify-between mb-3">
@@ -20,7 +13,7 @@ function ReviewCard({ review }) {
           </div>
           <div>
             <div className="font-medium text-gray-900">{review.user_name}</div>
-            <div className="text-xs text-gray-500">{formatDate(review.created_at)}</div>
+            <div className="text-xs text-gray-500">{formatDateLong(review.created_at)}</div>
           </div>
         </div>
         <StarRating rating={review.rating} size="sm" />

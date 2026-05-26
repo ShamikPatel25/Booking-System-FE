@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css'
 import { AdminLayout, DataTable } from '../../components/admin'
 import { getAllBookings, getEvents } from '../../services/adminService'
 import { Spinner, Badge } from '../../components/ui'
+import { formatDateLong, formatTime } from '../../utils/dateUtils'
 
 const PAGE_SIZE = 10
 
@@ -77,7 +78,7 @@ function BookingListPage() {
     setPage(newPage)
   }
 
-  const formatDate = (dateStr) => {
+  const formatDateTime = (dateStr) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -86,20 +87,6 @@ function BookingListPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
-
-  const formatShowDate = (dateStr) => {
-    if (!dateStr) return 'N/A'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-  }
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return ''
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(hours, minutes)
-    return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
   }
 
   const getStatusBadge = (status) => {
@@ -192,7 +179,7 @@ function BookingListPage() {
       render: (val) => `₹${parseFloat(val || 0).toFixed(0)}`
     },
     { key: 'status', label: 'Status', render: (val) => getStatusBadge(val) },
-    { key: 'created_at', label: 'Booked On', render: (val) => formatDate(val) },
+    { key: 'created_at', label: 'Booked On', render: (val) => formatDateTime(val) },
     {
       key: 'actions',
       label: 'Actions',
@@ -253,7 +240,7 @@ function BookingListPage() {
                 <div>
                   <p className="text-sm text-gray-500">Show Date & Time</p>
                   <p className="font-medium">
-                    {formatShowDate(detailModal.booking.show?.show_date)} at {formatTime(detailModal.booking.show?.start_time)}
+                    {formatDateLong(detailModal.booking.show?.show_date)} at {formatTime(detailModal.booking.show?.start_time)}
                   </p>
                 </div>
                 <div>

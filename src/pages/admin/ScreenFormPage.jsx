@@ -8,6 +8,7 @@ import {
   blockScreenSeats, unblockScreenSeats
 } from '../../services/adminService'
 import { Spinner, ToastContainer } from '../../components/ui'
+import { useToast } from '../../hooks/useToast'
 
 function ScreenFormPage() {
   const { venueId, screenId } = useParams()
@@ -36,16 +37,7 @@ function ScreenFormPage() {
   const [error, setError] = useState('')
   const [categoryError, setCategoryError] = useState('')
   const [editingCategory, setEditingCategory] = useState(null)
-  const [toasts, setToasts] = useState([])
-
-  const addToast = (message, type = 'success') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  const { toasts, addToast, removeToast } = useToast()
 
   useEffect(() => {
     const fetchKey = `${venueId}-${screenId}`

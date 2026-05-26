@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom'
 import { AdminLayout, DataTable, DeleteConfirmModal, ActionMenu } from '../../components/admin'
 import { getVenue, getScreens, deleteScreen, updateScreen } from '../../services/adminService'
 import { Spinner, Badge, ToastContainer } from '../../components/ui'
+import { useToast } from '../../hooks/useToast'
 
 const PAGE_SIZE = 10
 
@@ -18,18 +19,9 @@ function ScreenListPage() {
   const [error, setError] = useState('')
   const [deleteModal, setDeleteModal] = useState({ open: false, item: null })
   const [deleting, setDeleting] = useState(false)
-  const [toasts, setToasts] = useState([])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-
-  const addToast = (message, type = 'success') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  const { toasts, addToast, removeToast } = useToast()
 
   useEffect(() => {
     if (location.state?.toast && !toastShown.current) {

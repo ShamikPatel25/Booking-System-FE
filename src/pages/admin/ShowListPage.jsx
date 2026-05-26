@@ -3,6 +3,8 @@ import { useParams, Link, useLocation } from 'react-router-dom'
 import { AdminLayout, DataTable, DeleteConfirmModal, ActionMenu } from '../../components/admin'
 import { getEvent, getShows, deleteShow, getVenues } from '../../services/adminService'
 import { Spinner, Badge, ToastContainer } from '../../components/ui'
+import { useToast } from '../../hooks/useToast'
+import { formatDateLong, formatTime } from '../../utils/dateUtils'
 
 const PAGE_SIZE = 10
 
@@ -19,18 +21,9 @@ function ShowListPage() {
   const [error, setError] = useState('')
   const [deleteModal, setDeleteModal] = useState({ open: false, item: null })
   const [deleting, setDeleting] = useState(false)
-  const [toasts, setToasts] = useState([])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-
-  const addToast = (message, type = 'success') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  const { toasts, addToast, removeToast } = useToast()
 
   useEffect(() => {
     if (location.state?.toast && !toastShown.current) {
@@ -90,22 +83,6 @@ function ShowListPage() {
     return show.screen?.name || 'Unknown'
   }
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
-  const formatTime = (timeStr) => {
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(hours, minutes)
-    return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-  }
-
   const handleDelete = async () => {
     if (!deleteModal.item) return
     setDeleting(true)
@@ -124,7 +101,7 @@ function ShowListPage() {
   }
 
   const columns = [
-    { key: 'show_date', label: 'Date', render: (val) => formatDate(val) },
+    { key: 'show_date', label: 'Date', render: (val) => formatDateLong(val) },
     { key: 'start_time', label: 'Start Time', render: (val) => formatTime(val) },
     { key: 'end_time', label: 'End Time', render: (val) => formatTime(val) },
     { key: 'screen', label: 'Venue / Screen', render: (_, row) => getScreenInfo(row) },

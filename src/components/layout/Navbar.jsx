@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import CitySelector from './CitySelector'
-import LanguageSelector from '../LanguageSelector'
 
 function Navbar() {
   const { user, logout, isAuthenticated, isAdmin } = useAuth()
@@ -39,7 +38,6 @@ function Navbar() {
           {/* City Selector (Desktop) */}
           <div className="hidden md:flex items-center gap-2">
             <CitySelector />
-            <LanguageSelector />
           </div>
 
           {/* Desktop Navigation */}

@@ -87,6 +87,16 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+    opacity: 0;
+  }
 }
 
 /* React DatePicker Custom Styles */
